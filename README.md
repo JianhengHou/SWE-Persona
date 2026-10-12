@@ -15,7 +15,7 @@ The Lite selection contains the same 100 task/persona pairs; public profile name
 
 ## 1. Install
 
-Use Linux, Python 3.12, Docker Engine with the Compose plugin, and permission to run Docker. The harness pins Harbor 0.23.0 and mini-swe-agent 2.4.6. Image downloads and builds require network access and sufficient disk space. Task CPU, memory, storage and GPU requirements are recorded in Parquet.
+Use Linux, Python 3.12, Docker Engine with the Compose plugin, and permission to run Docker. On macOS, use Docker Desktop 4.86.0 or newer. The harness pins Harbor 0.23.0 and mini-swe-agent 2.4.6. Image downloads and builds require network access and sufficient disk space. Task CPU, memory, storage and GPU requirements are recorded in Parquet.
 
 Install [Git LFS](https://git-lfs.com/) before cloning. The Lite Parquet is stored in Git LFS; use the commands below to download the actual dataset and verify the release files.
 
