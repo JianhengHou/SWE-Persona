@@ -51,6 +51,106 @@ def chat_messages(items):
     return messages
 
 
+COMPLETE_OUTPUT_TOKENS = 16384
+_LENGTH_REASONS = {'length', 'max_tokens', 'max_output_tokens'}
+# One shared ceiling for thinking plus the visible action. Steps follow the
+# usual coding-agent bands; the active step is chosen from reasoning effort.
+OUTPUT_BUDGET_STEPS = (8192, 16384, 32768, 65536, 131072)
+_OUTPUT_BUDGET_BY_EFFORT = {
+    'none': 8192, 'disabled': 8192, 'minimal': 8192,
+    'low': 16384, 'medium': 65536, 'high': 65536,
+    'xhigh': 131072, 'max': 131072,
+}
+
+
+def resolved_effort(configured, requested='medium'):
+    """Config wins. inherit keeps the caller's effort; omit sends no effort."""
+    if configured in (None, '', 'inherit'):
+        return requested
+    if configured == 'omit':
+        return None
+    return configured
+
+
+def output_budget(effort):
+    """Starting completion ceiling for this thinking effort, thinking included."""
+    if effort is None:
+        return _OUTPUT_BUDGET_BY_EFFORT['medium']
+    return _OUTPUT_BUDGET_BY_EFFORT.get(str(effort).lower(), _OUTPUT_BUDGET_BY_EFFORT['medium'])
+
+
+def raised_output_budget(current):
+    """Next ceiling after a length cutoff. None when already at the top step."""
+    for step in OUTPUT_BUDGET_STEPS:
+        if step > current:
+            return step
+    return None
+
+
+def lower_output_budget(current):
+    """Previous ceiling when a provider rejects the requested maximum."""
+    previous = OUTPUT_BUDGET_STEPS[0]
+    for step in OUTPUT_BUDGET_STEPS:
+        if step >= current:
+            return previous
+        previous = step
+    return previous
+
+
+def generation_timeout(tokens, configured, limit=None):
+    """Wait long enough for the completion ceiling, and stop at an explicit deadline."""
+    configured = float(configured)
+    needed = configured if not tokens else min(900.0, max(configured, float(tokens) / 80.0))
+    if limit is not None:
+        needed = min(needed, float(limit))
+    return needed
+
+
+def token_limit_rejected(message):
+    """True when an HTTP 400 says the completion ceiling itself is out of range."""
+    text = (message or '').lower()
+    if not any(name in text for name in ('max_tokens', 'max_completion_tokens', 'max_output_tokens')):
+        return False
+    return any(phrase in text for phrase in ('range', 'maximum', 'must be', 'less than or equal', 'should be'))
+
+
+def token_range_ceiling(message):
+    """Upper bound stated by the provider, when the error includes one."""
+    import re
+    text = message or ''
+    match = re.search(r'\[\s*\d+\s*,\s*(\d+)\s*\]', text)
+    if match:
+        return int(match.group(1))
+    match = re.search(r'(?:maximum|<=|less than or equal to)\s*(\d+)', text, re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def weaker_structured_mode(mode):
+    """Next output mode when this endpoint rejects or ignores the current one."""
+    return {'json_schema': 'json_object', 'json_object': 'prompt'}.get(mode)
+
+
+def format_rejected(message):
+    """True when an HTTP 400 is about the structured-output parameter itself."""
+    text = (message or '').lower()
+    return any(token in text for token in (
+        'response_format', 'json_schema', 'json_object', 'structured output', 'response format'))
+
+
+def complete_json_object(text):
+    """True when the whole assistant message is one JSON object."""
+    body = (text or '').strip()
+    if not body:
+        return False
+    try:
+        value = json.loads(body)
+    except json.JSONDecodeError:
+        return False
+    return isinstance(value, dict)
+
+
 def chat_payload(messages, *, model, max_output_tokens, token_field, effort, tools, schema, tool_choice, structured_output_mode="json_schema"):
     payload = {'model': model, 'messages': chat_messages(messages), token_field: max_output_tokens}
     if effort is not None:
@@ -67,23 +167,22 @@ def chat_payload(messages, *, model, max_output_tokens, token_field, effort, too
             payload['tool_choice'] = ({'type': 'function', 'function': {'name': tool_choice['name']}}
                                      if isinstance(tool_choice, dict) else tool_choice)
     if schema is not None:
-        if structured_output_mode in ('json_object','prompt'):
-            if structured_output_mode == 'json_object':
-                payload['response_format'] = {'type': 'json_object'}
-            instruction = ('\nOutput transport: return ONLY one JSON object conforming to this schema. '
-                'Natural-language role content belongs inside the appropriate string fields, never '
-                'before or after the JSON envelope. Do not use Markdown fences. Schema: '
-                + json.dumps(schema, ensure_ascii=False))
-            indices = [i for i,m in enumerate(payload['messages']) if m.get('role') == 'system']
-            if indices:
-                payload['messages'][indices[-1]]['content'] += instruction
-            else:
-                payload['messages'].insert(0, {'role':'system','content':instruction})
+        if structured_output_mode == 'json_object':
+            payload['response_format'] = {'type': 'json_object'}
         elif structured_output_mode == 'json_schema':
             payload['response_format'] = {'type': 'json_schema', 'json_schema': {
                 'name': 'result', 'strict': True, 'schema': schema}}
-        else:
+        elif structured_output_mode != 'prompt':
             raise ValueError('Unsupported structured output mode')
+        instruction = ('\nOutput transport: return ONLY one JSON object conforming to this schema. '
+            'Natural-language role content belongs inside the appropriate string fields, never '
+            'before or after the JSON envelope. Do not use Markdown fences. Schema: '
+            + json.dumps(schema, ensure_ascii=False))
+        indices = [i for i,m in enumerate(payload['messages']) if m.get('role') == 'system']
+        if indices:
+            payload['messages'][indices[-1]]['content'] += instruction
+        else:
+            payload['messages'].insert(0, {'role':'system','content':instruction})
     return payload
 
 

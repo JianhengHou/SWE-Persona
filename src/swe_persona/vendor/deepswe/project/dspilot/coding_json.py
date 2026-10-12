@@ -1,6 +1,8 @@
 """Explicit JSON action transport for the new Harbor scaffold, never prose repair."""
 import json
 from contextlib import nullcontext
+from .api_codec import output_budget, raised_output_budget, resolved_effort
+from .api_config import role_config
 from .protocol import ACTION_SCHEMA, dump
 
 from .coding_backend import JSON_ACT_VERSION as VERSION
@@ -41,10 +43,20 @@ class JsonActBackend:
     def next_action(self,number):
         if self.pending is not None:raise ValueError('Previous action has no observation')
         repairs=0
+        effort=resolved_effort(role_config(self.client.cfg,'agent')['REASONING_EFFORT'])
+        budget=output_budget(effort)
+        raised=False
         while True:
-            response=self.client.create(self.history,schema=ACTION_SCHEMA,max_output_tokens=10000,effort='medium')
+            response=self.client.create(self.history,schema=ACTION_SCHEMA,max_output_tokens=budget,effort=effort or 'medium')
             try:action=validate(response,self.client)
             except (ValueError,KeyError,TypeError) as exc:
+                nxt=raised_output_budget(budget)
+                ceiling=getattr(self.client,'_output_ceiling',{}).get('agent')
+                if ((response.get('incomplete_details') or {}).get('reason')=='length' and nxt
+                        and not raised and (not ceiling or nxt<=ceiling)):
+                    budget=nxt
+                    raised=True
+                    continue
                 retry=repairs<2 and sum(x['retry_granted'] for x in self.rejected)<12
                 folder=self.out/'rejected-agent-responses';folder.mkdir(exist_ok=True)
                 name=f'action-{number:03d}-rejection-{len(self.rejected)+1:03d}.json';dump(folder/name,response)

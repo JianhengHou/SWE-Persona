@@ -11,7 +11,9 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from .api_config import config, role_config, public_routes
-from .api_codec import chat_payload, chat_response
+from .api_codec import (_LENGTH_REASONS, chat_payload, chat_response, complete_json_object,
+                        format_rejected, generation_timeout, lower_output_budget, output_budget,
+                        token_limit_rejected, token_range_ceiling, weaker_structured_mode)
 from .coding_budget import bounded_timeout
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +32,8 @@ class Client:
         self.deadline = deadline
         self.calls = 0
         self.usage = {'input_tokens': 0, 'output_tokens': 0, 'cached_tokens': 0}
+        self._structured_floor = {}
+        self._output_ceiling = {}
 
     def redact(self, text: str) -> str:
         secrets = [(v, '[REDACTED]' if k.endswith('API_KEY') else '[API_ENDPOINT]')
@@ -38,7 +42,7 @@ class Client:
             text = text.replace(value, marker)
         return text
 
-    def create(self, messages, *, role='agent', max_output_tokens=4096, tools=None, schema=None, effort='medium', tool_choice=None, _retry=0):
+    def create(self, messages, *, role='agent', max_output_tokens=4096, tools=None, schema=None, effort='medium', tool_choice=None, _retry=0, _structured=None, _shrink=0):
         if self.calls >= self.max_calls or (self.deadline and time.monotonic() >= self.deadline):
             raise ApiFailure('API call or episode time budget exhausted')
         if role == 'agent': bounded_timeout(300)
@@ -48,11 +52,17 @@ class Client:
         effective_effort = effort if configured_effort == 'inherit' else (
             None if configured_effort == 'omit' else configured_effort)
         mode = route['API_MODE']
+        structured = _structured or self._structured_floor.get(role) or route['STRUCTURED_OUTPUT_MODE']
+        if structured not in ('json_schema', 'json_object', 'prompt'):
+            raise ValueError('Unsupported structured output mode')
+        schema_text = None if schema is None else (
+            'Return only one JSON object conforming to this JSON Schema, with no prose outside it. Schema: '
+            + json.dumps(schema))
         if mode == 'chat_completions':
             payload = chat_payload(messages, model=model, max_output_tokens=max_output_tokens,
                 token_field=route['MAX_TOKENS_FIELD'], effort=effective_effort,
                 tools=tools, schema=schema, tool_choice=tool_choice,
-                structured_output_mode=route['STRUCTURED_OUTPUT_MODE'])
+                structured_output_mode=structured)
             suffix = '/chat/completions'
         elif mode == 'responses':
             payload = {'model': model, 'input': messages, 'store': False, 'max_output_tokens': max_output_tokens}
@@ -62,14 +72,12 @@ class Client:
                 payload.update(tools=tools, parallel_tool_calls=False)
                 payload['include'] = ['reasoning.encrypted_content']
                 if tool_choice: payload['tool_choice'] = tool_choice
-            if schema is not None:
-                if route['STRUCTURED_OUTPUT_MODE'] in ('json_object','prompt'):
-                    if not isinstance(messages, list): raise ValueError('JSON mode requires message list')
-                    payload['input'] = [{'role': 'system', 'content':
-                        'Return only one JSON object conforming to this JSON Schema: ' + json.dumps(schema)}] + messages
-                    if route['STRUCTURED_OUTPUT_MODE'] == 'json_object':
-                        payload['text'] = {'format': {'type': 'json_object'}}
-                else:
+            if schema_text is not None:
+                if not isinstance(messages, list): raise ValueError('JSON mode requires message list')
+                payload['input'] = [{'role': 'system', 'content': schema_text}] + messages
+                if structured == 'json_object':
+                    payload['text'] = {'format': {'type': 'json_object'}}
+                elif structured == 'json_schema':
                     payload['text'] = {'format': {'type': 'json_schema', 'name': 'result', 'strict': True, 'schema': schema}}
             suffix = '/responses'
         else:
@@ -80,6 +88,16 @@ class Client:
         extra=options.pop('extra_body',{})
         if not isinstance(extra,dict) or set(extra)-{'thinking'}:raise ValueError('Only thinking is supported in extra_body')
         payload.update(options);payload.update(extra)
+        if role == 'agent' and schema is not None:
+            floor = output_budget(effective_effort)
+            ceiling = self._output_ceiling.get(role)
+            for field in ('max_tokens', 'max_completion_tokens', 'max_output_tokens'):
+                current = payload.get(field)
+                if isinstance(current, int) and not isinstance(current, bool):
+                    sized = max(current, floor)
+                    if ceiling:
+                        sized = min(sized, ceiling)
+                    payload[field] = sized
         headers = {'Content-Type': 'application/json'}
         if route['API_PROVIDER'] == 'azure':
             headers['api-key'] = route['API_KEY']
@@ -94,6 +112,9 @@ class Client:
         self.calls += 1
         timeout=float(route['HTTP_TIMEOUT_SECONDS'])
         if not __import__('math').isfinite(timeout) or timeout<=0:raise ValueError('Invalid role HTTP timeout')
+        if role == 'agent' and schema is not None:
+            sent = max((payload.get(field) or 0) for field in ('max_tokens', 'max_completion_tokens', 'max_output_tokens'))
+            timeout = generation_timeout(sent, timeout)
         timeout = min(timeout, max(1, self.deadline-started)) if self.deadline else timeout
         if role == 'agent': timeout = bounded_timeout(timeout)
         def retry_or_fail(message, transient):
@@ -107,8 +128,22 @@ class Client:
             if transient and _retry<1:
                 # No tool action is executed until a complete response is returned.
                 return self.create(messages,role=role,max_output_tokens=max_output_tokens,tools=tools,
-                                   schema=schema,effort=effort,tool_choice=tool_choice,_retry=_retry+1)
+                                   schema=schema,effort=effort,tool_choice=tool_choice,_retry=_retry+1,
+                                   _structured=structured,_shrink=_shrink)
             raise ApiFailure(message) from None
+        def fallback(reason):
+            nxt = weaker_structured_mode(structured)
+            if schema is None or not nxt:
+                return None
+            self._structured_floor[role] = nxt
+            if self.log:
+                self.log.parent.mkdir(parents=True, exist_ok=True)
+                with self.log.open('a') as f:
+                    f.write(self.redact(json.dumps({'call': self.calls, 'role': role, 'model': model,
+                        'status': 'format_fallback', 'from': structured, 'to': nxt, 'reason': reason[:300]}))+'\n')
+            return self.create(messages, role=role, max_output_tokens=max_output_tokens, tools=tools,
+                               schema=schema, effort=effort, tool_choice=tool_choice, _retry=_retry,
+                               _structured=nxt, _shrink=_shrink)
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 result = json.load(resp)
@@ -119,6 +154,23 @@ class Client:
                 message = self.redact(str(error.get('message', '')))[:600]
             except Exception:
                 code, message = 'unparsed_error', 'response body withheld'
+            if exc.code == 400 and token_limit_rejected(message) and schema is not None and _shrink < 4:
+                sent = max((payload.get(field) or 0) for field in ('max_tokens', 'max_completion_tokens', 'max_output_tokens'))
+                ceiling = token_range_ceiling(message) or lower_output_budget(sent)
+                if ceiling and ceiling < sent:
+                    self._output_ceiling[role] = min(self._output_ceiling.get(role, ceiling), ceiling)
+                    if self.log:
+                        self.log.parent.mkdir(parents=True, exist_ok=True)
+                        with self.log.open('a') as f:
+                            f.write(self.redact(json.dumps({'call': self.calls, 'role': role, 'model': model,
+                                'status': 'token_ceiling', 'from': sent, 'to': self._output_ceiling[role]}))+'\n')
+                    return self.create(messages, role=role, max_output_tokens=self._output_ceiling[role], tools=tools,
+                                       schema=schema, effort=effort, tool_choice=tool_choice, _retry=_retry,
+                                       _structured=structured, _shrink=_shrink+1)
+            if exc.code == 400 and format_rejected(message):
+                retried = fallback('http_400')
+                if retried is not None:
+                    return retried
             return retry_or_fail(f'HTTP {exc.code}; code={code}; {message}',exc.code==429 or exc.code>=500)
         except Exception as exc:
             return retry_or_fail(f'API transport failed: {type(exc).__name__}; details withheld',True)
@@ -141,6 +193,16 @@ class Client:
             self.log.parent.mkdir(parents=True, exist_ok=True)
             with self.log.open('a') as f:
                 f.write(self.redact(json.dumps(record))+'\n')
+        reason = (result.get('incomplete_details') or {}).get('reason') or result.get('chat_finish_reason')
+        if schema is not None and structured == 'json_schema' and reason not in _LENGTH_REASONS:
+            try:
+                body = self.text(result)
+            except (TypeError, KeyError, AttributeError):
+                body = ''
+            if body.strip() and not complete_json_object(body):
+                retried = fallback('response_not_json')
+                if retried is not None:
+                    return retried
         return result
 
     @staticmethod
