@@ -7,13 +7,25 @@ import time
 from pathlib import Path
 
 
+def host_boot_id():
+    """Reboot token for the probe cache. Linux uses boot_id; macOS uses boot time."""
+    path = Path('/proc/sys/kernel/random/boot_id')
+    if path.is_file():
+        return path.read_text().strip()
+    result = subprocess.run(['sysctl', '-n', 'kern.boottime'], capture_output=True, text=True)
+    stamp = result.stdout.strip()
+    if result.returncode == 0 and stamp:
+        return stamp
+    raise FileNotFoundError(path)
+
+
 def probe_kernel(environment_type, trial_dir, timeout=120, attempts=2):
     trial_dir = Path(trial_dir)
     trial_dir.mkdir(parents=True, exist_ok=True)
     command = environment_type._engine_cmd(
         'container', 'run', '--rm', environment_type._EGRESS_CONTROL_KERNEL_PROBE_IMAGE,
         'sh', '-c', environment_type._EGRESS_CONTROL_KERNEL_PROBE_SCRIPT)
-    boot = Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    boot = host_boot_id()
     identity = hashlib.sha256(json.dumps([
         command, boot, os.environ.get('DOCKER_HOST'), os.environ.get('DOCKER_CONTEXT'),
     ]).encode()).hexdigest()
