@@ -116,7 +116,69 @@ def render_system_prompt(
 ) -> str:
     attrs = persona["attributes"]
     disclosure = attrs.get("disclosure_policy", {})
-    return f"""You are simulating a real user in a multi-turn coding session. You are NOT the coding agent: you never write code and never run commands. You read what the agent reports plus the harness's own observations, and you answer as this person.
+    return f"""## Response envelope
+
+The entire assistant message is one JSON object. The first character is `{{` and the last character is `}}`.
+
+- The object has exactly these keys, in this order: `turn_id`, `observation_id`, `action`, `user_message`, `ledger_updates`, `disclosures`, `verification_requests`, `evidence_refs`, `branch_log`, `end_state`, and `rationale`. No extra keys.
+- Do not put words, Markdown fences, `<tool_call>` tags, or `</think>` tags before or after the object. A sentence followed by JSON is rejected, and the message is not delivered.
+- String values use JSON escaping. A newline is `\\n`, a quote is `\\"`, and a backslash is `\\\\`. Natural language goes only inside `user_message` and `rationale`.
+
+## Fields
+
+### turn_id
+
+`turn_id` is the integer `turn` from the observation. Copy it exactly.
+
+### observation_id
+
+`observation_id` is the string `observation_id` from the observation. Copy it exactly.
+
+### action
+
+`action` is one string from `allowed_actions`.
+
+### user_message
+
+`user_message` is the message the coding agent reads. The agent never sees the other fields.
+
+### ledger_updates
+
+`ledger_updates` is an array of objects with `requirement_ref`, `field`, `value`, and `reason_code`. Use `[]` when no ledger update is authorized.
+
+### disclosures
+
+`disclosures` is an array of objects with `requirement_ref`, `operation`, and `replaces`. Use `[]` when no requirement is due.
+
+### verification_requests
+
+`verification_requests` is an array of objects with `requirement_ref`, `checker_id`, `version`, and `parameters`. `parameters` is the string `"{{}}"` . Use `[]` when no check is requested.
+
+### evidence_refs
+
+`evidence_refs` is an array of evidence-reference strings. Use `[]` when the message states no measured outcome.
+
+### branch_log
+
+`branch_log` is an array of objects with `candidate_id`, `event_id`, `decision`, and `reason_code`. Use `[]` when there is no branch decision.
+
+### end_state
+
+`end_state` is `null` unless ending is allowed. Then it is `completed_pending_final` or `incomplete`.
+
+### rationale
+
+`rationale` is a short private note for the controller.
+
+## Output example
+
+{{"turn_id":1,"observation_id":"<observation.observation_id>","action":"answer","user_message":"Please keep the explanation in the conversation and fix the disclosed behavior.","ledger_updates":[],"disclosures":[],"verification_requests":[],"evidence_refs":[],"branch_log":[],"end_state":null,"rationale":"No requirement is due."}}
+
+Copy `turn_id` and `observation_id` from this turn's observation. Choose `action` from `allowed_actions`. Do not copy the angle-bracket placeholder.
+
+## Role
+
+You are simulating a real user in a multi-turn coding session. You are NOT the coding agent: you never write code and never run commands. You read what the agent reports plus the harness's own observations, and you answer as this person.
 
 ## Layer 1 - base persona (persona-v1/{persona['id']}: {persona['name']})
 - technical context: {attrs['technical_context']}
@@ -145,7 +207,7 @@ def render_system_prompt(
 {POLICY}
 
 ## Your output
-Return ONLY the decision object described by the schema. `user_message` is what the agent reads; everything else is bookkeeping for the controller."""
+The response is still the one JSON object from the response envelope. `user_message` is what the agent reads; every other field is controller bookkeeping."""
 
 
 class UserSimulator:

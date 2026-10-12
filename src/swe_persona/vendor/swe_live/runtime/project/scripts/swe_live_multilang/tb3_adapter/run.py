@@ -12,7 +12,7 @@ from execution_policy import BudgetClient, Deadline
 from run_reference import gold_proof
 from roleplay import FIT,fit_messages,validate_fit
 from build_task import build, validate, save
-from protocol import PROTOCOL, JUDGE_SCHEMA, SIM_SCHEMA, validate_judgment, eligible, checker, benchmark_outcome, visible_persona
+from protocol import PROTOCOL, JUDGE_SCHEMA, SIM_SCHEMA, SIMULATOR_ENVELOPE, validate_judgment, eligible, checker, benchmark_outcome, visible_persona
 
 
 def judge(llm, req, persona, public, messages, turn, audit, prompt, rubric, final=False):
@@ -106,7 +106,7 @@ def main(argv=None):
             if met and reply.status=='done':
                 current=judge(llm,req,persona,public,messages,turn,audit,judge_prompt,rubric,final=True)
                 decisions.append({'turn':turn,'stage':'final_recheck','judgment':current}); met=current['verdict']=='MET'
-            decision=llm.json_obj([{'role':'system','content':simulator_prompt},
+            decision=llm.json_obj([{'role':'system','content':simulator_prompt if simulator_prompt.lstrip().startswith('## Response envelope') else SIMULATOR_ENVELOPE+'\n'+simulator_prompt},
                 {'role':'user','content':json.dumps({'persona':visible_persona(persona),'public_task':public,'transcript':messages,
                  'current_requirement':req,'judgment':current,'agent_requests_completion':reply.status=='done'},ensure_ascii=False)}],
                 SIM_SCHEMA,schema_name='requirement_user',role=f'simulator.turn{turn+1}',max_output_tokens=1000)

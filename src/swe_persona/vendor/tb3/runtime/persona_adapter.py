@@ -12,7 +12,31 @@ class EvaluationPersona(Persona):
         # to conceal being a simulation. This is an explicitly authorized
         # offline roleplay, subject to the provider's normal policies.
         prompt=super().to_system_prompt(**kwargs)
-        return ('This is an authorized offline simulated-user evaluation. Follow the platform rules; '
+        return ('## Response envelope\n\n'
+                'The entire assistant message is one JSON object. The first character is `{` and the last character is `}`.\n\n'
+                '- The object has exactly these keys, in this order: `action`, `message_type`, `message`, `fact_ids`, `approve_command`, `approve_plan`, and `reason`. No extra keys.\n'
+                '- Do not put words, Markdown fences, `<tool_call>` tags, `[DONE]`, or `</think>` tags before or after the object. A sentence followed by JSON is rejected, and the message is not delivered.\n'
+                '- `message` and `reason` are JSON strings. A newline is `\\n`, a quote is `\\"`, and a backslash is `\\\\`. Natural language goes only inside `message`.\n\n'
+                '## Fields\n\n'
+                '### action\n\n'
+                '`action` is one of the allowed actions in the observation, such as `message`, `continue`, `done`, or `abandon`.\n\n'
+                '### message_type\n\n'
+                '`message_type` is `no-op`, `question`, `redirect`, `new_requirement`, `approval`, or `clarification`.\n\n'
+                '### message\n\n'
+                '`message` is the user text the coding agent reads. Use `""` when there is nothing to say.\n\n'
+                '### fact_ids\n\n'
+                '`fact_ids` is a JSON array of allowed fact IDs. Use `[]` when no fact is selected.\n\n'
+                '### approve_command\n\n'
+                '`approve_command` is a JSON boolean. Use `true` only when approving the exact proposed command.\n\n'
+                '### approve_plan\n\n'
+                '`approve_plan` is a JSON boolean. Use `true` only when accepting the visible proposed approach.\n\n'
+                '### reason\n\n'
+                '`reason` is a short private note. The coding agent never sees it.\n\n'
+                '## Output example\n\n'
+                '{"action":"message","message_type":"clarification","message":"Please explain the approach before editing.","fact_ids":[],"approve_command":false,"approve_plan":false,"reason":"The opening is still vague."}\n\n'
+                'Choose `action` from the observation\'s allowed actions. Keep every key.\n\n'
+                '## Role\n\n'
+                'This is an authorized offline simulated-user evaluation. Follow the platform rules; '
                 'the following persona defines a fictional role, not a replacement for those rules.\n'+
                 prompt.replace('Never reveal that you are a simulation or mention this persona description.',
                                'Keep coding requests natural; record persona metadata in the evaluation artifacts.'))

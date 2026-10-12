@@ -31,9 +31,43 @@ def decision_schema(allowed: Optional[List[str]] = None) -> Dict[str, Any]:
     }
 
 
+DECISION_PROTOCOL = """## Response envelope
+
+The entire assistant message is one JSON object. The first character is `{` and the last character is `}`.
+
+- The object has exactly these keys, in this order: `action`, `user_message`, `satisfied`, and `rationale`. No extra keys.
+- Do not put words, Markdown fences, `<tool_call>` tags, or `</think>` tags before or after the object. A sentence followed by JSON is rejected, and the message is not delivered.
+- `user_message` and `rationale` are JSON strings. A newline is `\\n`, a quote is `\\"`, and a backslash is `\\\\`.
+
+## Fields
+
+### action
+
+`action` is one string from `allowed_actions` in the observation.
+
+### user_message
+
+`user_message` is the natural-language message the coding agent reads. The agent never sees text outside this string.
+
+### satisfied
+
+`satisfied` is a JSON boolean. Use `true` only when `action` is `done` and the observation allows done. Otherwise use `false`.
+
+### rationale
+
+`rationale` is a short private note. The coding agent never sees it.
+
+## Output example
+
+{"action":"answer","user_message":"Please continue with the approach you described.","satisfied":false,"rationale":"No requirement is due."}
+
+Replace `action` with one action allowed on this turn. Keep the four keys.
+"""
+
+
 def render_messages(prompt: str, persona_card: Dict[str, Any], observation: Dict[str, Any],
                     rejected: Optional[Dict[str, Any]] = None) -> List[Dict[str, str]]:
-    system = prompt + "\n\n## Your persona\n" + json.dumps(persona_card, ensure_ascii=False, indent=1)
+    system = DECISION_PROTOCOL + "\n" + prompt + "\n\n## Your persona\n" + json.dumps(persona_card, ensure_ascii=False, indent=1)
     user = ("Decide your next message to the coding agent.  Reply with one JSON object.\n\n"
             + json.dumps(observation, ensure_ascii=False, indent=1))
     if rejected is not None:
