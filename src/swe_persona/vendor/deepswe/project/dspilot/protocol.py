@@ -3,8 +3,8 @@ import json
 from .task import public_persona
 
 ACTION_SCHEMA={'type':'object','properties':{'action':{'type':'string','enum':['shell','validate','reply']},
-               'content':{'type':'string'},'phase':{'type':'string','enum':['planning','working','question','done']}},
-               'required':['action','content','phase'],'additionalProperties':False}
+               'phase':{'type':'string','enum':['planning','working','question','done']},'content':{'type':'string'}},
+               'required':['action','phase','content'],'additionalProperties':False}
 ACTION_TOOL={'type':'function','name':'act','description':'Perform exactly one real action. shell executes a command; validate runs independent public tests; reply delivers a message to the user. Wait for the real tool result before continuing. Never simulate executions.',
              'parameters':ACTION_SCHEMA,'strict':True}
 
