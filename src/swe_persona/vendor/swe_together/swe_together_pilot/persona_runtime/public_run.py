@@ -23,6 +23,11 @@ from swe_persona.api_recovery import assess_interrupted, is_api_interruption
 from swe_persona.agent_output import action_envelope
 
 PROFILE='swe-together'
+
+def command_timed_out(exc):
+    """Harbor reports an exec timeout as RuntimeError, not TimeoutError."""
+    return isinstance(exc, TimeoutError) or (
+        isinstance(exc, RuntimeError) and str(exc).startswith('Command timed out after '))
 AGENT_SCHEMA={'type':'object','additionalProperties':False,'properties':{
     'action':{'type':'string','enum':['command','message']},
     'content':{'type':'string'},'completion_claim':{'type':'boolean'}},
@@ -202,7 +207,9 @@ async def episode(binding,task,config,out,image,seconds=1800,max_steps=200,verif
                 limit=max(1,min(180,math.ceil(deadline-time.monotonic())))
                 timed=False
                 try:r=await env.exec(action['content'],cwd=workdir,timeout_sec=limit);rc=r.return_code;output=(r.stdout or '')+'\n'+(r.stderr or '')
-                except asyncio.TimeoutError:timed=True;rc=124;output='Host command timeout.'
+                except Exception as exc:
+                    if not command_timed_out(exc):raise
+                    timed=True;rc=124;output='Host command timeout.'
                 after=await evidence()
                 version=after['snapshot_sha256'] if before['snapshot_sha256']==after['snapshot_sha256'] else None
                 executions.append({'ref':f'host-command-{step}','command':action['content'],'returncode':rc,'timed_out':timed,
