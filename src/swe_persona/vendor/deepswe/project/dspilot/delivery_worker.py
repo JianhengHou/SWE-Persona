@@ -15,6 +15,9 @@ def main():
     p.add_argument('--calibration-dry-run', action='store_true')
     p.add_argument('--calibration-reuse', action='store_true')
     a = p.parse_args()
+    # Harbor starts in this child. The parent patch does not cross the process boundary.
+    from swe_persona.harbor_bridge import align_egress_sidecar_platform
+    align_egress_sidecar_platform()
     from . import specs
     if a.operation == 'calibrate':
         from .delivery_calibration import dry_run, run

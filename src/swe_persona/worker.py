@@ -197,8 +197,10 @@ def main():
     config=load_config(args.config,require_keys=args.mode!='dry-run') if args.config else None
     if args.mode!='dry-run' and config is None:raise ValueError('API configuration is required')
     os.environ['PYTHONDONTWRITEBYTECODE']='1';sys.dont_write_bytecode=True
-    from .harbor_bridge import align_egress_sidecar_platform
+    from .harbor_bridge import align_egress_sidecar_platform, prepare_egress_sidecar
     align_egress_sidecar_platform()
+    if os.environ.get('DOCKER_DEFAULT_PLATFORM'):
+        prepare_egress_sidecar(os.environ['DOCKER_DEFAULT_PLATFORM'])
     if config:os.environ['PCB_MODEL']=config['judge']['model']
     if config:
         # Legacy prerequisite checks read these variables, but model calls are
