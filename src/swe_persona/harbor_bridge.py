@@ -60,6 +60,14 @@ def prepare_egress_sidecar(platform):
             dockerfile_path=DockerEnvironment._egress_control_sidecar_dockerfile_path(),
             build_args={}, platform=platform))
     drop_wrong_platform_tag(image, platform)
+    import harbor.environments.docker.docker as docker_mod
+
+    async def requested_platform():
+        return platform
+
+    # Harbor names the sidecar from this binding. It must change even when the
+    # requested image already exists; otherwise it keeps the daemon hash.
+    docker_mod.default_docker_platform = requested_platform
     present = subprocess.run(['docker', 'image', 'inspect', image],
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if present.returncode == 0:
@@ -72,13 +80,6 @@ def prepare_egress_sidecar(platform):
         capture_output=True, text=True)
     if built.returncode:
         raise RuntimeError('Failed to build sidecar ' + image + ': ' + built.stderr[-800:])
-    import harbor.environments.docker.docker as docker_mod
-
-    async def requested_platform():
-        return platform
-
-    # Harbor's own builder asks the daemon unless this binding is replaced.
-    docker_mod.default_docker_platform = requested_platform
     return image
 
 

@@ -151,6 +151,15 @@ class SidecarPlatformTests(unittest.TestCase):
                 asyncio.run(aligned(fake))
         drop.assert_called_once_with('sidecar--hash', 'linux/amd64')
 
+    def test_existing_requested_image_still_changes_harbor_platform(self):
+        with patch('swe_persona.harbor_bridge.drop_wrong_platform_tag', return_value=False), \
+             patch('swe_persona.harbor_bridge.subprocess.run', autospec=True,
+                   return_value=subprocess.CompletedProcess([], 0, '', '')):
+            image = prepare_egress_sidecar('linux/amd64')
+        self.assertTrue(image.endswith('--9af3dc172792cee8'))
+        from harbor.environments.docker.docker import default_docker_platform
+        self.assertEqual(asyncio.run(default_docker_platform()), 'linux/amd64')
+
     def test_prepare_rebuilds_only_a_wrong_architecture_sidecar(self):
         with patch('swe_persona.harbor_bridge.drop_wrong_platform_tag', return_value=True) as drop, \
              patch('swe_persona.harbor_bridge.subprocess.run', autospec=True, side_effect=[
