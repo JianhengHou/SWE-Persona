@@ -50,13 +50,11 @@ text { fill: #1B2559; }
 <text class="ttl halo" x="706.0" y="84.0" text-anchor="end" style="font-size:21px;fill:#6D28D9">USER SIMULATOR</text>
 <text class="hand halo" x="706.0" y="108.0" text-anchor="end" style="font-size:15px;fill:#475569">persona voice &#183;</text>
 <text class="hand halo" x="706.0" y="127.0" text-anchor="end" style="font-size:15px;fill:#475569">says the due requirement verbatim</text>
-<circle cx="1261.43" cy="45.5" r="14" fill="#1B2559" opacity="0.15"/>
-<circle cx="1259.93" cy="43" r="14" fill="#1E3A8A" stroke="#FFFFFF" stroke-width="1.6"/>
-<text class="handb" x="1259.93" y="49" text-anchor="middle" style="font-size:17px;fill:#FFFFFF">4</text>
-<path d="M1275.9,55.0 C1364.0,51.0 1476.0,57.0 1564.1,53.0" fill="none" stroke="#1E3A8A" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
-<text class="ttl halo" x="1420.0" y="50.0" text-anchor="middle" style="font-size:21px;fill:#1E3A8A">SHELL-BASED INTERACTIVE</text>
-<path d="M1342.9,79.0 C1390.8,75.0 1449.2,81.0 1497.1,77.0" fill="none" stroke="#1E3A8A" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
-<text class="ttl halo" x="1420.0" y="74.0" text-anchor="middle" style="font-size:21px;fill:#1E3A8A">CODING AGENT</text>
+<circle cx="1328.42" cy="57.5" r="14" fill="#1B2559" opacity="0.15"/>
+<circle cx="1326.92" cy="55" r="14" fill="#1E3A8A" stroke="#FFFFFF" stroke-width="1.6"/>
+<text class="handb" x="1326.92" y="61" text-anchor="middle" style="font-size:17px;fill:#FFFFFF">4</text>
+<path d="M1342.9,67.0 C1390.8,63.0 1449.2,69.0 1497.1,65.0" fill="none" stroke="#1E3A8A" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
+<text class="ttl halo" x="1420.0" y="62.0" text-anchor="middle" style="font-size:21px;fill:#1E3A8A">CODING AGENT</text>
 <circle cx="520.6" cy="707.5" r="14" fill="#1B2559" opacity="0.15"/>
 <circle cx="519.1" cy="705" r="14" fill="#1E40AF" stroke="#FFFFFF" stroke-width="1.6"/>
 <text class="handb" x="519.1" y="711" text-anchor="middle" style="font-size:17px;fill:#FFFFFF">3</text>
@@ -76,15 +74,15 @@ text { fill: #1B2559; }
 <circle cx="1345.5" cy="815.5" r="14" fill="#1B2559" opacity="0.15"/>
 <circle cx="1344" cy="813" r="14" fill="#1D4ED8" stroke="#FFFFFF" stroke-width="1.6"/>
 <text class="handb" x="1344" y="819" text-anchor="middle" style="font-size:17px;fill:#FFFFFF">6</text>
-<path d="M1360.0,825.0 C1403.7,821.0 1456.6,827.0 1500.2,823.0" fill="none" stroke="#1D4ED8" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
-<text class="ttl halo" x="1364.0" y="820.0" text-anchor="start" style="font-size:19px;fill:#1D4ED8">NATIVE JUDGE</text>
+<path d="M1360.0,825.0 C1426.8,821.0 1510.6,827.0 1577.4,823.0" fill="none" stroke="#1D4ED8" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
+<text class="ttl halo" x="1364.0" y="820.0" text-anchor="start" style="font-size:19px;fill:#1D4ED8">COMPLETION VERIFIER</text>
 <text class="hand halo" x="1364.0" y="841.0" text-anchor="start" style="font-size:15px;fill:#475569">hidden tests of the source task</text>
 <text class="hand halo" x="1364.0" y="860.0" text-anchor="start" style="font-size:15px;fill:#475569">on final workspace</text>
-<circle cx="145.87" cy="899.5" r="14" fill="#1B2559" opacity="0.15"/>
-<circle cx="144.37" cy="897" r="14" fill="#A21CAF" stroke="#FFFFFF" stroke-width="1.6"/>
-<text class="handb" x="144.37" y="903" text-anchor="middle" style="font-size:17px;fill:#FFFFFF">6</text>
-<path d="M160.4,909.0 C207.3,905.0 264.7,911.0 311.6,907.0" fill="none" stroke="#A21CAF" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
-<text class="ttl halo" x="236.0" y="904.0" text-anchor="middle" style="font-size:19px;fill:#A21CAF">PERSONA JUDGE</text>
+<circle cx="85.26000000000002" cy="899.5" r="14" fill="#1B2559" opacity="0.15"/>
+<circle cx="83.76000000000002" cy="897" r="14" fill="#A21CAF" stroke="#FFFFFF" stroke-width="1.6"/>
+<text class="handb" x="83.76000000000002" y="903" text-anchor="middle" style="font-size:17px;fill:#FFFFFF">6</text>
+<path d="M99.8,909.0 C183.1,905.0 288.9,911.0 372.2,907.0" fill="none" stroke="#A21CAF" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
+<text class="ttl halo" x="236.0" y="904.0" text-anchor="middle" style="font-size:19px;fill:#A21CAF">PERSONALIZATION VERIFIER</text>
 <text class="hand halo" x="236.0" y="925.0" text-anchor="middle" style="font-size:15px;fill:#475569">persona rubrics on transcript &amp; artifacts</text>
 <path d="M725.9,705.0 C776.1,701.0 837.9,707.0 888.1,703.0" fill="none" stroke="#7C3AED" stroke-width="9" stroke-linecap="round" opacity="0.16"/>
 <text class="ttl halo" x="807.0" y="700.0" text-anchor="middle" style="font-size:19px;fill:#7C3AED">JOINT VERIFIER</text>
@@ -253,7 +251,7 @@ text { fill: #1B2559; }
 <circle cx="544" cy="816" r="16" fill="#A21CAF"/>
 <circle cx="544" cy="812" r="16" fill="#FFFFFF" stroke="#A21CAF" stroke-width="2"/>
 <g fill="none" stroke="#A21CAF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="537" y="804" width="14" height="16" rx="2"/><circle cx="544" cy="810" r="2.6"/><path d="M540,817 q4,-4 8,0"/></g>
-<text class="handb halo" x="544.0" y="846.0" text-anchor="middle" style="font-size:15px;fill:#A21CAF">persona verdict</text>
+<text class="handb halo" x="544.0" y="846.0" text-anchor="middle" style="font-size:15px;fill:#A21CAF">personalization verdict</text>
 <path d="M1180.4,820.5 Q1038.4,826.4 896.3,820.3" fill="none" stroke="#1B2559" stroke-width="4.8" opacity="0.10" transform="translate(4 8)" stroke-linecap="round" filter="url(#blur)"/>
 <path d="M1180.4,820.5 Q1038.4,826.4 896.3,820.3" fill="none" stroke="#1D4ED8" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#pencil)"/>
 <path d="M1180.4,820.5 Q1038.4,826.4 896.3,820.3" fill="none" stroke="#1D4ED8" stroke-width="1.4" stroke-linecap="round" opacity="0.5" transform="translate(1.4 -1.2)" filter="url(#pencil)"/>
@@ -262,31 +260,31 @@ text { fill: #1B2559; }
 <circle cx="1036" cy="822" r="16" fill="#1D4ED8"/>
 <circle cx="1036" cy="818" r="16" fill="#FFFFFF" stroke="#1D4ED8" stroke-width="2"/>
 <g fill="none" stroke="#1D4ED8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1029,813 l2,2 l3,-3 M1029,821 l2,2 l3,-3 M1037,814 h6 M1037,822 h6"/></g>
-<text class="handb halo" x="1036.0" y="852.0" text-anchor="middle" style="font-size:15px;fill:#1D4ED8">native verdict</text>
-<path d="M626,906 l22,-4 v32 l-22,4 l10,-16z" fill="#2539B5"/>
-<path d="M988,906 l-22,-4 v32 l22,4 l-10,-16z" fill="#8E2FB8"/>
-<path d="M648,898 Q807.0,890 966,898 v36 Q807.0,926 648,934z" fill="url(#gRib)"/>
-<path d="M645.9,898.4 Q727.1,895.8 808.4,894.3 M806.7,894.3 Q887.4,895.2 968.1,897.7 M965.5,897.9 Q965.6,916.5 965.7,935.1 M967.2,933.4 Q886.3,932.0 805.4,930.6 M808.3,930.3 Q727.4,932.5 646.4,933.4 M647.4,936.1 Q648.1,916.5 648.3,897.0" fill="none" stroke="#1B2559" stroke-width="1.30" stroke-linecap="round" opacity="0.90" filter="url(#pencil)"/>
-<path d="M647.0,898.6 Q727.4,895.9 807.8,893.9 M806.1,894.5 Q886.4,896.9 966.7,898.0 M965.3,897.2 Q966.6,915.8 966.2,934.4 M966.7,934.3 Q886.6,931.7 806.4,930.5 M807.7,929.8 Q727.5,932.0 647.3,934.6 M647.5,934.0 Q646.8,915.7 647.8,897.3" fill="none" stroke="#1B2559" stroke-width="0.65" stroke-linecap="round" opacity="0.50" filter="url(#pencil)"/>
-<text class="ttl" x="807.0" y="922" text-anchor="middle" style="font-size:18px;fill:#FFFFFF">persona &#10003; &#8743; native &#10003;</text>
-<path d="M992.2,916.1 Q994.3,916.0 996.4,915.9" fill="none" stroke="#1B2559" stroke-width="4.2" opacity="0.10" transform="translate(4 8)" stroke-linecap="round" filter="url(#blur)"/>
-<path d="M992.2,916.1 Q994.3,916.0 996.4,915.9" fill="none" stroke="#059669" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round" filter="url(#pencil)"/>
-<path d="M992.2,916.1 Q994.3,916.0 996.4,915.9" fill="none" stroke="#059669" stroke-width="1.2" stroke-linecap="round" opacity="0.5" transform="translate(1.4 -1.2)" filter="url(#pencil)"/>
-<path d="M998.4,915.8 L979.6,924.9 L984.6,916.4 L979.0,908.2z" fill="#059669" stroke="#059669" stroke-width="1.2" stroke-linejoin="round" filter="url(#pencil)"/>
-<rect x="1002" y="905" width="160" height="30" rx="15" fill="#10B981" opacity="0.35"/>
-<rect x="1000" y="901" width="160" height="30" rx="15" fill="#ECFDF5" stroke="#10B981" stroke-width="1.8"/>
-<circle cx="1016" cy="916" r="10" fill="#10B981"/>
-<text class="handb" x="1016" y="921" text-anchor="middle" style="font-size:14px;fill:#FFFFFF">&#10003;</text>
-<text class="handb" x="1032" y="922" style="font-size:15px;fill:#047857">both &#10003; &#8594; pass</text>
-<path d="M621.8,916.1 Q617.9,915.8 614.0,915.5" fill="none" stroke="#1B2559" stroke-width="4.2" opacity="0.10" transform="translate(4 8)" stroke-linecap="round" filter="url(#blur)"/>
-<path d="M621.8,916.1 Q617.9,915.8 614.0,915.5" fill="none" stroke="#E11D48" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round" filter="url(#pencil)"/>
-<path d="M621.8,916.1 Q617.9,915.8 614.0,915.5" fill="none" stroke="#E11D48" stroke-width="1.2" stroke-linecap="round" opacity="0.5" transform="translate(1.4 -1.2)" filter="url(#pencil)"/>
-<path d="M612.0,915.3 L631.7,908.7 L625.7,916.5 L630.3,925.3z" fill="#E11D48" stroke="#E11D48" stroke-width="1.2" stroke-linejoin="round" filter="url(#pencil)"/>
-<rect x="448" y="905" width="164" height="30" rx="15" fill="#F43F5E" opacity="0.35"/>
-<rect x="446" y="901" width="164" height="30" rx="15" fill="#FFF1F2" stroke="#F43F5E" stroke-width="1.8"/>
-<circle cx="462" cy="916" r="10" fill="#F43F5E"/>
-<text class="handb" x="462" y="921" text-anchor="middle" style="font-size:14px;fill:#FFFFFF">&#10007;</text>
-<text class="handb" x="478" y="922" style="font-size:15px;fill:#BE123C">either &#10007; &#8594; fail</text>
+<text class="handb halo" x="1036.0" y="852.0" text-anchor="middle" style="font-size:15px;fill:#1D4ED8">completion verdict</text>
+<path d="M600,906 l22,-4 v32 l-22,4 l10,-16z" fill="#2539B5"/>
+<path d="M1014,906 l-22,-4 v32 l22,4 l-10,-16z" fill="#8E2FB8"/>
+<path d="M622,898 Q807.0,890 992,898 v36 Q807.0,926 622,934z" fill="url(#gRib)"/>
+<path d="M619.9,898.4 Q714.1,895.8 808.4,894.3 M806.7,894.3 Q900.4,895.2 994.1,897.7 M991.5,897.9 Q991.6,916.5 991.7,935.1 M993.2,933.4 Q899.3,932.0 805.4,930.6 M808.3,930.3 Q714.4,932.5 620.4,933.4 M621.4,936.1 Q622.1,916.5 622.3,897.0" fill="none" stroke="#1B2559" stroke-width="1.30" stroke-linecap="round" opacity="0.90" filter="url(#pencil)"/>
+<path d="M621.0,898.6 Q714.4,895.9 807.8,893.9 M806.1,894.5 Q899.4,896.9 992.7,898.0 M991.3,897.2 Q992.6,915.8 992.2,934.4 M992.7,934.3 Q899.6,931.7 806.4,930.5 M807.7,929.8 Q714.5,932.0 621.3,934.6 M621.5,934.0 Q620.8,915.7 621.8,897.3" fill="none" stroke="#1B2559" stroke-width="0.65" stroke-linecap="round" opacity="0.50" filter="url(#pencil)"/>
+<text class="ttl" x="807.0" y="922" text-anchor="middle" style="font-size:18px;fill:#FFFFFF">personalization &#10003; &#8743; completion &#10003;</text>
+<path d="M1018.2,916.1 Q1032.3,916.0 1046.4,915.9" fill="none" stroke="#1B2559" stroke-width="4.2" opacity="0.10" transform="translate(4 8)" stroke-linecap="round" filter="url(#blur)"/>
+<path d="M1018.2,916.1 Q1032.3,916.0 1046.4,915.9" fill="none" stroke="#059669" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round" filter="url(#pencil)"/>
+<path d="M1018.2,916.1 Q1032.3,916.0 1046.4,915.9" fill="none" stroke="#059669" stroke-width="1.2" stroke-linecap="round" opacity="0.5" transform="translate(1.4 -1.2)" filter="url(#pencil)"/>
+<path d="M1048.4,915.9 L1029.3,924.3 L1034.6,916.0 L1029.2,907.7z" fill="#059669" stroke="#059669" stroke-width="1.2" stroke-linejoin="round" filter="url(#pencil)"/>
+<rect x="1052" y="905" width="152" height="30" rx="15" fill="#10B981" opacity="0.35"/>
+<rect x="1050" y="901" width="152" height="30" rx="15" fill="#ECFDF5" stroke="#10B981" stroke-width="1.8"/>
+<circle cx="1066" cy="916" r="10" fill="#10B981"/>
+<text class="handb" x="1066" y="921" text-anchor="middle" style="font-size:14px;fill:#FFFFFF">&#10003;</text>
+<text class="handb" x="1082" y="922" style="font-size:15px;fill:#047857">both &#10003; &#8594; pass</text>
+<path d="M595.8,916.1 Q579.9,915.8 564.0,915.5" fill="none" stroke="#1B2559" stroke-width="4.2" opacity="0.10" transform="translate(4 8)" stroke-linecap="round" filter="url(#blur)"/>
+<path d="M595.8,916.1 Q579.9,915.8 564.0,915.5" fill="none" stroke="#E11D48" stroke-width="3.0" stroke-linecap="round" stroke-linejoin="round" filter="url(#pencil)"/>
+<path d="M595.8,916.1 Q579.9,915.8 564.0,915.5" fill="none" stroke="#E11D48" stroke-width="1.2" stroke-linecap="round" opacity="0.5" transform="translate(1.4 -1.2)" filter="url(#pencil)"/>
+<path d="M562.0,915.4 L581.2,907.5 L575.8,915.7 L580.9,924.2z" fill="#E11D48" stroke="#E11D48" stroke-width="1.2" stroke-linejoin="round" filter="url(#pencil)"/>
+<rect x="398" y="905" width="164" height="30" rx="15" fill="#F43F5E" opacity="0.35"/>
+<rect x="396" y="901" width="164" height="30" rx="15" fill="#FFF1F2" stroke="#F43F5E" stroke-width="1.8"/>
+<circle cx="412" cy="916" r="10" fill="#F43F5E"/>
+<text class="handb" x="412" y="921" text-anchor="middle" style="font-size:14px;fill:#FFFFFF">&#10007;</text>
+<text class="handb" x="428" y="922" style="font-size:15px;fill:#BE123C">either &#10007; &#8594; fail</text>
 </g>
 <rect width="1600" height="960" filter="url(#paper)" opacity="0.6"/>
 </svg>
