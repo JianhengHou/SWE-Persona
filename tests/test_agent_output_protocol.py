@@ -137,6 +137,20 @@ class DeepExecutionTests(unittest.TestCase):
                 self.assertTrue(all(not item['executed'] for item in rejected))
                 self.assertFalse((Path(directory)/'response-001.json').exists())
 
+    def test_nul_in_shell_content_gets_protocol_repair_instead_of_reaching_docker(self):
+        # As observed: a model emitted \u0000 where '&' belonged, and docker exec raised "embedded null byte".
+        bad = {'action':'shell','phase':'working','content':"sed -i 's/x/atomic.AddInt32(\x00f.n, -1)/' mux.go"}
+        good = {**bad,'content':"sed -i 's/x/atomic.AddInt32(\\&f.n, -1)/' mux.go"}
+        with tempfile.TemporaryDirectory() as directory:
+            client = self.client([self.response(bad),self.response(good)])
+            rejected = []
+            backend = deep.JsonActBackend(client,Path(directory),rejected)
+            action,_,_ = backend.next_action(1)
+            self.assertEqual(action,good)
+            self.assertEqual([item['executed'] for item in rejected],[False])
+            self.assertIn('U+0000',rejected[0]['error'])
+            self.assertIn('U+0000',backend.history[-2]['content'])
+
     def test_format_repair_preserves_schema_budget_deadline_and_user_authority(self):
         value = {'phase':'planning','content':'Here is my plan.','action':'reply'}
         client = self.client([{'status':'completed','output':[],'text':'Invalid prose'},self.response(value)])

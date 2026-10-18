@@ -472,7 +472,9 @@ def transcript_digest(transcript: List[Dict[str, Any]]) -> str:
 
 
 def _parse_check_line(stdout: str) -> Optional[Dict[str, Any]]:
-    for line in reversed((stdout or "").splitlines()):
+    # Split on "\n" only: splitlines() also breaks at U+0085/U+2028/U+2029, which the driver's JSON
+    # (ensure_ascii=False) leaves raw when evidence quotes UTF-8-decoded binary files.
+    for line in reversed((stdout or "").split("\n")):
         if line.startswith("CHECK "):
             try:
                 payload = json.loads(line[6:])

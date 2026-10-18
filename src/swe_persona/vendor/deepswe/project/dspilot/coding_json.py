@@ -31,6 +31,10 @@ def validate(response,client):
             or action['phase'] not in ('planning','working','question','done')
             or not isinstance(action['content'],str)):
         raise ValueError('Invalid JSON action')
+    # A script holding a decoded \u0000 cannot be passed to docker exec (subprocess raises "embedded null byte",
+    # which ended the interaction), so reject it like any other malformed action and let protocol repair run.
+    if action['action']=='shell' and '\x00' in action['content']:
+        raise ValueError('Shell content contains a NUL character (U+0000), which a command line cannot carry')
     if any(item.get('type')=='function_call' for item in response.get('output',[])):
         raise ValueError('JSON action mode must not contain additional tool calls')
     return action
