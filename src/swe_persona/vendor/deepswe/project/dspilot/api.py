@@ -14,7 +14,7 @@ from .api_config import config, role_config, public_routes
 from .api_codec import chat_payload, chat_response
 from .coding_budget import bounded_timeout
 from swe_persona.api_recovery import APITransportExhausted, append_audit, retry_transport
-from swe_persona.api_output import POLICY as OUTPUT_POLICY, OutputBudget, configured_limit
+from swe_persona.api_output import POLICY as OUTPUT_POLICY, OutputBudget, coding_budget, configured_limit
 from swe_persona.output_mode import POLICY as FORMAT_POLICY, OutputModeFallback, mode_messages
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,8 +40,12 @@ class Client:
         configured_effort = route['REASONING_EFFORT']
         effective_effort = effort if configured_effort == 'inherit' else (
             None if configured_effort == 'omit' else configured_effort)
+        options=json.loads(route['REQUEST_OPTIONS_JSON'])
+        if role == 'agent':
+            return coding_budget(options,effort=effective_effort,requested=max_output_tokens,
+                ceiling=self._output_ceiling.get(role))
         return OutputBudget.resolve(adaptive=role == 'agent' and schema is not None,
-            effort=effective_effort, configured=configured_limit(json.loads(route['REQUEST_OPTIONS_JSON'])),
+            effort=effective_effort, configured=configured_limit(options),
             requested=max_output_tokens, ceiling=self._output_ceiling.get(role))
 
     def request_deadline(self, role='agent', *, started=None):
@@ -189,13 +193,18 @@ class Client:
             self.usage['input_tokens'] += usage.get('input_tokens', 0)
             self.usage['output_tokens'] += usage.get('output_tokens', 0)
             self.usage['cached_tokens'] += (usage.get('input_tokens_details') or {}).get('cached_tokens', 0)
+            reason = ((result.get('incomplete_details') or {}).get('reason')
+                      or result.get('chat_finish_reason') or result.get('status'))
+            visible_text=self.text(result)
             record = {'call': self.calls, 'role': role, 'model': model, 'effort': effective_effort,
                       'api_route': metadata, 'structured_output_mode':output_mode, 'requested_max_tokens':budget.current,
                       'seconds': round(time.monotonic()-started, 3), 'usage': usage,
-                      'status': result.get('status'), 'incomplete_details': result.get('incomplete_details')}
+                      'status': result.get('status'), 'finish_reason':reason,
+                      'reasoning_tokens':(usage.get('output_tokens_details') or {}).get('reasoning_tokens'),
+                      'visible_output_chars':len(visible_text),
+                      'incomplete_details': result.get('incomplete_details')}
             if self.log:
                 append_audit(self.log,record)
-            reason = (result.get('incomplete_details') or {}).get('reason') or result.get('chat_finish_reason')
             old_limit = budget.current
             if budget.grow(reason):
                 audit({'policy':OUTPUT_POLICY,'status':'length_retry','reason':reason,

@@ -223,7 +223,7 @@ async def episode(binding,task,config,out,image,seconds=1800,max_steps=200,verif
                 from jsonschema import ValidationError
                 request=list(conversation)
                 for attempt in range(3):
-                    try:return await asyncio.to_thread(api.json,request,AGENT_SCHEMA,'agent_action',16000,max(.1,deadline-time.monotonic()))
+                    try:return await asyncio.to_thread(api.json,request,AGENT_SCHEMA,'agent_action',None,max(.1,deadline-time.monotonic()))
                     except (APIConnectionError,RateLimitError,InternalServerError):
                         if attempt==2 or time.monotonic()>=deadline:raise
                         await asyncio.sleep(min(2**attempt,max(0,deadline-time.monotonic())))
