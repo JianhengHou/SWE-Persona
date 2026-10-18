@@ -16,7 +16,8 @@ import urllib.error
 import httpx
 from openai import APIStatusError
 from swe_persona.api import RoleAPI
-from swe_persona.api_output import IncompleteOutputError, OutputBudget, LENGTH_REASONS, provider_ceiling
+from swe_persona.api_output import (IncompleteOutputError, OutputBudget, LENGTH_REASONS,
+                                    coding_budget, provider_ceiling)
 from swe_persona.api_recovery import APITransportExhausted
 
 ROOT = Path(__file__).parents[1]
@@ -44,13 +45,15 @@ def sdk_error(status, message):
 
 
 def sdk_response(text='{"ok":true}', reason='stop', api='chat_completions'):
-    usage = NS(prompt_tokens=3,completion_tokens=7,input_tokens=3,output_tokens=7)
+    usage = NS(prompt_tokens=3,completion_tokens=7,input_tokens=3,output_tokens=7,
+               completion_tokens_details=NS(reasoning_tokens=2),
+               output_tokens_details=NS(reasoning_tokens=2))
     if api == 'responses':
         return NS(model='fixture',output_text=text,usage=usage,
             status='incomplete' if reason in LENGTH_REASONS else 'completed',
             incomplete_details=NS(reason=reason) if reason in LENGTH_REASONS else None)
     return NS(model='fixture',usage=usage,
-        choices=[NS(finish_reason=reason,message=NS(content=text))])
+        choices=[NS(finish_reason=reason,message=NS(content=text,reasoning_content='why'))])
 
 
 class PublicOutputTests(unittest.TestCase):
@@ -84,12 +87,26 @@ class PublicOutputTests(unittest.TestCase):
 
     def test_tb3_agent_uses_effort_budgets_instead_of_fixed_cap(self):
         for effort, limit in ((None,65536),('none',8192),('low',16384),
-                              ('medium',65536),('high',65536),('xhigh',131072)):
+                              ('medium',65536),('high',65536),('xhigh',131072),('max',131072)):
             with self.subTest(effort=effort):
                 options = {} if effort is None else {'reasoning_effort': effort}
                 api, create, _ = self.api([sdk_response()], options=options)
                 self.assertEqual(self.tb3_call(api, 'coding_agent'), {'ok': True})
                 self.assertEqual(create.call_args.kwargs['max_completion_tokens'], limit)
+
+    def test_unstructured_agent_call_uses_the_same_effort_budget_and_growth(self):
+        api,create,_=self.api([sdk_response('', 'length'),sdk_response()],
+                              options={'reasoning_effort':'low'})
+        self.assertEqual(api.raw([],schema=None)['text'],'{"ok":true}')
+        self.assertEqual([c.kwargs['max_completion_tokens'] for c in create.call_args_list],
+                         [16384,32768])
+
+    def test_unstructured_agent_never_executes_output_truncated_at_the_top_step(self):
+        api,create,_=self.api([sdk_response('partial action', 'length')],
+                              options={'reasoning_effort':'max'})
+        with self.assertRaises(IncompleteOutputError):
+            api.raw([],schema=None)
+        self.assertEqual(create.call_args.kwargs['max_completion_tokens'],131072)
 
     def test_tb3_agent_recovers_truncation_with_shared_budget_growth(self):
         api, create, _ = self.api([sdk_response('', 'length'), sdk_response()])
@@ -236,6 +253,10 @@ class PublicOutputTests(unittest.TestCase):
             records=[json.loads(line) for line in (Path(temp)/'api-calls.jsonl').read_text().splitlines()]
             self.assertEqual([r['requested_max_tokens'] for r in records],[65536,131072])
             self.assertEqual([r['output_tokens'] for r in records],[7,7])
+            self.assertEqual([r['effort'] for r in records],['medium','medium'])
+            self.assertEqual([r['finish_reason'] for r in records],['length','stop'])
+            self.assertEqual([r['reasoning_tokens'] for r in records],[2,2])
+            self.assertEqual([r['visible_output_chars'] for r in records],[0,len('{"ok":true}')])
             audit=json.loads((Path(temp)/'transport-recovery.jsonl').read_text())
             self.assertEqual(audit['status'],'length_retry')
             self.assertFalse(audit['action_executed'])
@@ -243,12 +264,20 @@ class PublicOutputTests(unittest.TestCase):
 
 class BudgetTests(unittest.TestCase):
     def test_effort_defaults_and_top_step(self):
-        for effort,limit in (('none',8192),('low',16384),('medium',65536),('high',65536),('xhigh',131072)):
+        for effort,limit in (('none',8192),('minimal',8192),('low',16384),('medium',65536),
+                             ('high',65536),('xhigh',131072),('max',131072)):
             with self.subTest(effort=effort):
                 budget=OutputBudget.resolve(adaptive=True,effort=effort)
                 self.assertEqual(budget.current,limit)
-                self.assertEqual(budget.grow('length'),effort!='xhigh')
+                self.assertEqual(budget.grow('length'),effort not in ('xhigh','max'))
                 self.assertFalse(budget.grow('max_output_tokens'))
+
+    def test_shared_coding_budget_keeps_explicit_configuration_authoritative(self):
+        self.assertEqual(coding_budget({'reasoning_effort':'max'}).current,131072)
+        budget=coding_budget({'reasoning_effort':'max','max_tokens':24000},requested=4096)
+        self.assertEqual(budget.current,24000)
+        self.assertTrue(budget.explicit)
+        self.assertFalse(budget.grow('length'))
 
     def test_provider_range_parsing_and_bounded_shrinking(self):
         for message in ('max_tokens range [1, 2048]','max_tokens must be between 1 and 2048',
@@ -272,12 +301,14 @@ class DeepOutputTests(unittest.TestCase):
     def response(self,text='{"ok":true}',reason='stop',transport='responses'):
         if transport=='chat_completions':
             data={'id':'fixture','choices':[{'finish_reason':reason,'message':{'content':text}}],
-                  'usage':{'prompt_tokens':3,'completion_tokens':7}}
+                  'usage':{'prompt_tokens':3,'completion_tokens':7,
+                           'completion_tokens_details':{'reasoning_tokens':2}}}
         else:
             data={'status':'incomplete' if reason in LENGTH_REASONS else 'completed',
                 'incomplete_details':{'reason':reason} if reason in LENGTH_REASONS else None,
                 'output':[{'type':'message','content':[{'type':'output_text','text':text}]}],
-                'usage':{'input_tokens':3,'output_tokens':7}}
+                'usage':{'input_tokens':3,'output_tokens':7,
+                         'output_tokens_details':{'reasoning_tokens':2}}}
         return io.BytesIO(json.dumps(data).encode())
 
     def request_mock(self,outcomes,records):
@@ -302,6 +333,21 @@ class DeepOutputTests(unittest.TestCase):
                     self.assertEqual(response['status'],'completed')
                     self.assertEqual(client.calls,2)
                     self.assertEqual(client.usage['output_tokens'],14)
+
+    def test_deepswe_audit_records_common_agent_budget_fields(self):
+        for transport in ('responses','chat_completions'):
+            with self.subTest(transport=transport), tempfile.TemporaryDirectory() as temp:
+                log=Path(temp)/'api.jsonl';client=self.client(transport=transport,log=log);records=[]
+                with patch.object(ds,'bounded_timeout',side_effect=lambda seconds:seconds), \
+                     patch.object(ds.urllib.request,'urlopen',
+                                  side_effect=self.request_mock([self.response(transport=transport)],records)):
+                    client.create([],schema=SCHEMA,effort='max')
+                audit=json.loads(log.read_text())
+                self.assertEqual(audit['requested_max_tokens'],65536)
+                self.assertEqual(audit['effort'],'medium')
+                self.assertEqual(audit['finish_reason'],'completed' if transport=='responses' else 'stop')
+                self.assertEqual(audit['reasoning_tokens'],2)
+                self.assertEqual(audit['visible_output_chars'],len('{"ok":true}'))
 
     def test_provider_downshift_is_cached_and_keeps_one_token_field(self):
         client=self.client(transport='chat_completions',options={'max_tokens':10000});records=[]

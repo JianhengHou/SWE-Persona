@@ -27,6 +27,12 @@ def configured_limit(options):
     return value
 
 
+def configured_effort(options):
+    """Return one shared reasoning-effort value from provider request options."""
+    reasoning = options.get('reasoning') or {}
+    return options.get('reasoning_effort', reasoning.get('effort'))
+
+
 def default_budget(effort):
     return EFFORT_BUDGETS.get(str(effort).lower() if effort is not None else '',
                              EFFORT_BUDGETS['medium'])
@@ -102,3 +108,10 @@ class OutputBudget:
         self.current = min(self.current, self.ceiling)
         self.shrinks += 1
         return True
+
+
+def coding_budget(options, *, effort=None, requested=None, ceiling=None):
+    """Resolve the common coding-agent budget independently of response format."""
+    return OutputBudget.resolve(adaptive=True,
+        effort=configured_effort(options) if effort is None else effort,
+        configured=configured_limit(options), requested=requested, ceiling=ceiling)

@@ -157,7 +157,7 @@ class TerminalAgent:
         format_retries = 0
         while True:
             messages = [{"role": "system", "content": self.system_prompt}] + self.history
-            text = self.llm.text(messages, role=f"agent.turn{turn}", max_output_tokens=4096)
+            text = self.llm.text(messages, role=f"agent.turn{turn}", max_output_tokens=None)
             result.raw_outputs.append(text)
             self.history.append({"role": "assistant", "content": text})
             kind, payload = self._parse(text)

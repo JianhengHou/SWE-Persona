@@ -85,11 +85,34 @@ class RecipientTextModel(LitellmTextbasedModel):
     abort_exceptions = LitellmTextbasedModel.abort_exceptions + [litellm.BadRequestError, APITransportExhausted]
 
     def _query(self, messages, **kwargs):
+        started = time.monotonic()
         def request(seconds):
             return super(RecipientTextModel, self)._query(messages, **dict(kwargs,timeout=seconds,num_retries=0))
-        return retry_transport(request,request_timeout=float(os.environ.get('SWE_PERSONA_AGENT_HTTP_TIMEOUT',300)),
+        response = retry_transport(request,request_timeout=float(os.environ.get('SWE_PERSONA_AGENT_HTTP_TIMEOUT',300)),
             deadline=self.recovery_deadline,
             audit=lambda record:append_audit(self.recovery_audit,dict(record,role='agent')))
+        def field(value, name, default=None):
+            return value.get(name, default) if isinstance(value, dict) else getattr(value, name, default)
+        choices = field(response, 'choices', []) or []
+        choice = choices[0] if choices else {}
+        message = field(choice, 'message', {}) or {}
+        usage = field(response, 'usage', {}) or {}
+        details = field(usage, 'completion_tokens_details', {}) or {}
+        text = field(message, 'content', '') or ''
+        reasoning = field(message, 'reasoning_content', '') or ''
+        append_audit(self.output_audit, {
+            'role':'agent','model':field(response,'model',self.config.model_name),
+            'elapsed_sec':time.monotonic()-started,
+            'input_tokens':field(usage,'prompt_tokens'),
+            'output_tokens':field(usage,'completion_tokens'),
+            'requested_max_tokens':self.output_budget,
+            'effort':self.output_effort or None,
+            'finish_reason':field(choice,'finish_reason'),
+            'reasoning_tokens':field(details,'reasoning_tokens'),
+            'reasoning_content_chars':len(reasoning) if isinstance(reasoning,str) else None,
+            'visible_output_chars':len(text) if isinstance(text,str) else None,
+        })
+        return response
 
 
 def make_model(request, config):
@@ -136,6 +159,9 @@ def main():
                                     time.monotonic() + request["timeout"], request["pid_file"])
     model.recovery_deadline = env.deadline
     model.recovery_audit = directory / 'transport-recovery.jsonl'
+    model.output_audit = directory / 'api-calls.jsonl'
+    model.output_budget = int(os.environ['SWE_PERSONA_AGENT_OUTPUT_BUDGET'])
+    model.output_effort = os.environ.get('SWE_PERSONA_AGENT_REASONING_EFFORT','')
     agent = DefaultAgent(model, env, system_template=system,
                          instance_template=instance, cost_limit=0,
                          step_limit=0, output_path=None)

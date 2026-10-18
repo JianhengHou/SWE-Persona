@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 from .api import RoleAPI, load_config, role_name, chat_token_options
+from .api_output import coding_budget, configured_effort
 from .dataset import write
 
 def module(name,path):
@@ -57,7 +58,12 @@ def install_v6(root,config,out):
     os.environ['PCB_AGENT_MODEL']=config['agent']['model']
     os.environ['OPENAI_BASE_URL']=config['judge']['base_url']
     os.environ['OPENAI_API_KEY']=os.environ.get(config['judge']['api_key_env'],'')
-    os.environ['SWE_PERSONA_AGENT_REQUEST_OPTIONS']=json.dumps(chat_token_options(config['agent']))
+    agent_options=config['agent'].get('request_options',{})
+    agent_budget=coding_budget(agent_options).current
+    os.environ['SWE_PERSONA_AGENT_REQUEST_OPTIONS']=json.dumps(
+        chat_token_options(config['agent'],max_tokens=agent_budget))
+    os.environ['SWE_PERSONA_AGENT_OUTPUT_BUDGET']=str(agent_budget)
+    os.environ['SWE_PERSONA_AGENT_REASONING_EFFORT']=str(configured_effort(agent_options) or '')
     os.environ['SWE_PERSONA_AGENT_HTTP_TIMEOUT']=str(config['agent'].get('timeout_sec',120))
     os.environ['PCB_AGENT_BASE_URL']=config['agent']['base_url']
     os.environ['PCB_AGENT_API_KEY']=os.environ.get(config['agent']['api_key_env'],'')

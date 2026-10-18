@@ -117,6 +117,8 @@ def chat_response(raw):
             'incomplete_details': None if status == 'completed' else {'reason': finish or 'missing_finish_reason'},
             'usage': {'input_tokens': usage.get('prompt_tokens', 0),
                       'output_tokens': usage.get('completion_tokens', 0),
+                      'output_tokens_details': {
+                          'reasoning_tokens': (usage.get('completion_tokens_details') or {}).get('reasoning_tokens')},
                       'input_tokens_details': {'cached_tokens': (usage.get('prompt_tokens_details') or {}).get('cached_tokens', 0)}}}
 
 

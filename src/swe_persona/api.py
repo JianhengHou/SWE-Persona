@@ -9,7 +9,8 @@ import time
 from jsonschema import Draft202012Validator, ValidationError
 from openai import APIStatusError, OpenAI
 from .api_recovery import append_audit, retry_transport
-from .api_output import POLICY as OUTPUT_POLICY, IncompleteOutputError, OutputBudget, configured_limit, is_truncated
+from .api_output import (POLICY as OUTPUT_POLICY, IncompleteOutputError, OutputBudget,
+                         coding_budget, configured_effort, configured_limit, is_truncated)
 from .output_mode import POLICY as FORMAT_POLICY, OutputModeFallback, configured_mode, mode_messages
 
 ROLES = ('agent', 'user_simulator', 'judge')
@@ -112,7 +113,9 @@ class RoleAPI:
 
     def output_budget(self, schema, max_tokens=None):
         options=self.config.get('request_options',{})
-        effort=options.get('reasoning_effort', (options.get('reasoning') or {}).get('effort'))
+        if role_name(self.role)=='agent':
+            return coding_budget(options,requested=max_tokens,ceiling=self._output_ceiling)
+        effort=configured_effort(options)
         return OutputBudget.resolve(adaptive=role_name(self.role)=='agent' and schema is not None,
             effort=effort, configured=configured_limit(options), requested=max_tokens,
             ceiling=self._output_ceiling)
@@ -198,8 +201,10 @@ class RoleAPI:
                     'role':self.role,'model':c['model'],'resolved_model':response.model,'api':c['api'],
                     'elapsed_sec':time.monotonic()-started,'input_tokens':input_tokens,'output_tokens':output_tokens,
                     'requested_max_tokens':budget.current,'finish_reason':finish,'incomplete_reason':reason,
+                    'effort':configured_effort(c.get('request_options',{})),
                     'reasoning_tokens':getattr(token_details,'reasoning_tokens',None),
                     'reasoning_content_chars':len(reasoning_content) if isinstance(reasoning_content,str) else None,
+                    'visible_output_chars':len(text),
                     'structured_output_mode':mode,'configured_output_mode':self._format.initial,
                     'messages':request_messages,'output':text})
             old_limit=budget.current
@@ -207,10 +212,10 @@ class RoleAPI:
                 audit({'policy':OUTPUT_POLICY,'status':'length_retry','reason':reason,
                        'from':old_limit,'to':budget.current,'action_executed':False})
                 continue
-            if schema is not None and is_truncated(reason) and _budget is None:
-                # Raw profile bridges may parse text without carrying finish
-                # metadata. Prevent them from executing an incomplete action.
-                raise IncompleteOutputError('Incomplete structured response: '+reason)
+            if (schema is not None or role_name(self.role)=='agent') and is_truncated(reason) and _budget is None:
+                # Raw text-agent bridges parse the returned text without carrying
+                # finish metadata. Never let them execute a truncated action.
+                raise IncompleteOutputError('Incomplete agent response: '+reason)
             return {'text':text,'input_tokens':total_input,'output_tokens':total_output,
                     'incomplete_reason':reason,'requested_max_tokens':budget.current}
 
