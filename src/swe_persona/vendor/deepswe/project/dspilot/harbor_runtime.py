@@ -24,6 +24,10 @@ def metadata():
 def start(box, verifier_tests, image, resources):
     metadata()
     import yaml
+    # Harbor starts here, after the copied worker has returned. Rebuild the
+    # sidecar for the platform this compose file requests before it is reused.
+    from swe_persona.harbor_bridge import prepare_egress_sidecar
+    prepare_egress_sidecar('linux/amd64')
     from harbor.environments.docker.docker import DockerEnvironment
     from harbor.models.task.config import EnvironmentConfig, NetworkMode, NetworkPolicy
     from harbor.models.trial.paths import TrialPaths
