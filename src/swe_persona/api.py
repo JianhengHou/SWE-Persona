@@ -71,6 +71,13 @@ def chat_token_options(config, max_tokens=None):
         if isinstance(limit,bool) or not isinstance(limit,int) or limit<=0:
             raise ValueError('Chat token limit must be a positive integer')
         options[field]=limit
+    # Z.ai rejects thinking as a top-level Chat field; the OpenAI SDK forwards extra_body.
+    thinking=options.pop('thinking',None)
+    if thinking is not None:
+        body=dict(options.get('extra_body') or {})
+        if not isinstance(body,dict):raise ValueError('extra_body must be an object')
+        body['thinking']=thinking
+        options['extra_body']=body
     return options
 
 def responses_options(config, max_tokens=None):

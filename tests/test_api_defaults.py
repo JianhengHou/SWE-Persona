@@ -8,7 +8,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
-from swe_persona.api import DEFAULT_USER_SIMULATOR_CONFIG, RoleAPI, load_config, responses_options
+from swe_persona.api import DEFAULT_USER_SIMULATOR_CONFIG, RoleAPI, chat_token_options, load_config, responses_options
 
 
 class APIDefaultTests(unittest.TestCase):
@@ -36,6 +36,15 @@ class APIDefaultTests(unittest.TestCase):
             responses_options({'request_options': {'reasoning_effort':'medium','reasoning':{'effort':'high'}}})
         with self.assertRaises(ValueError):
             responses_options({'request_options': {'max_output_tokens':12,'max_tokens':13}})
+
+    def test_zai_thinking_is_forwarded_in_extra_body(self):
+        options=chat_token_options({
+            'max_tokens_field':'max_completion_tokens',
+            'request_options':{'reasoning_effort':'max',
+                               'thinking':{'type':'enabled','clear_thinking':False}}})
+        self.assertEqual(options['extra_body']['thinking'],{'type':'enabled','clear_thinking':False})
+        self.assertNotIn('thinking',options)
+        self.assertEqual(options['reasoning_effort'],'max')
 
     def test_responses_uses_medium_and_configured_limit_with_schema_validation(self):
         with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, {'SWE_PERSONA_SIMULATOR_API_KEY':'fixture'}):
